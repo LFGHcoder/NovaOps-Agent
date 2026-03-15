@@ -1,6 +1,7 @@
 """Interview agent: runs screening questions and collects candidate answers."""
 
 from task import Task, TaskStatus
+from log_utils import log_step
 
 # Mock answers used when candidate_data["answers"] is not provided.
 _DEFAULT_MOCK_ANSWERS = [
@@ -28,6 +29,7 @@ class InterviewAgent:
         Answers come from task.candidate_data["answers"] or are mocked.
         Returns updated task with candidate_answers set and status = interviewing.
         """
+        log_step("Screening Agent", "Analyzing candidate answers against job description")
         questions = task.interview_questions or []
         provided = task.candidate_data.get("answers") if isinstance(task.candidate_data.get("answers"), list) else None
 
@@ -38,6 +40,7 @@ class InterviewAgent:
             answers = []
             for i in range(len(questions)):
                 answers.append(_DEFAULT_MOCK_ANSWERS[i % len(_DEFAULT_MOCK_ANSWERS)])
+        log_step("Screening Agent", "Screening complete", {"answers_collected": len(answers), "questions_answered": len(questions)})
 
         return task.model_copy(
             update={

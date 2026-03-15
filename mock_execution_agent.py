@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 from task import Task, TaskStatus
+from log_utils import log_step
 
 
 def _log_entry(action: str, result: str = "success") -> dict[str, str]:
@@ -27,11 +28,13 @@ class MockExecutionAgent:
         """
         Simulate the three actions, append execution_logs, set status = verified.
         """
+        log_step("Execution Agent", "Simulating ATS actions")
         logs = list(task.execution_logs or [])
 
         logs.append(_log_entry("login_hiring_dashboard"))
         logs.append(_log_entry("update_candidate_score"))
         logs.append(_log_entry("generate_summary_report"))
+        log_step("Execution Agent", "ATS actions completed", {"actions_logged": len(logs)})
 
         return task.model_copy(
             update={

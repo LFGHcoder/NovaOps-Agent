@@ -5,6 +5,7 @@ import re
 from typing import Any, Callable
 
 from task import Rubric, RubricCategory, Task, TaskStatus
+from log_utils import log_step
 
 
 def _mock_nova_lite_evaluate(prompt: str) -> str:
@@ -262,10 +263,19 @@ class EvaluationAgent:
         then recommendation. Else: fall back to existing AI evaluation.
         Merges result into task.evaluation and sets status = evaluated.
         """
+        log_step("Evaluation Agent", "Calculating weighted candidate score")
         if task.rubric and task.rubric.categories:
             evaluation_result = self._evaluate_with_rubric(task)
         else:
             evaluation_result = self._evaluate_fallback(task)
+        log_step(
+            "Evaluation Agent",
+            "Score computed",
+            {
+                "overall_score": evaluation_result.get("overall_score"),
+                "recommendation": evaluation_result.get("recommendation"),
+            },
+        )
 
         merged_evaluation = {
             **task.evaluation,

@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from task import Step, Task, TaskStatus
+from log_utils import log_step
 
 
 def _mock_nova_lite(prompt: str) -> str:
@@ -117,12 +118,18 @@ class PlannerAgent:
         Produce interview plan from task.job_description.
         Fills interview_questions, plan (Step objects), and sets status to planned.
         """
+        log_step("Planner Agent", "Generating ATS workflow plan")
         prompt = self._build_prompt(task.job_description)
         response = self._call_nova_lite(prompt)
         data = self._parse_response(response)
 
         steps = [Step(**s) for s in data["plan"]]
         interview_questions = list(data["interview_questions"])
+        log_step(
+            "Planner Agent",
+            "Plan generated",
+            {"questions": len(interview_questions), "plan_steps": len(steps), "matched_skills": len(data.get("required_skills", []))},
+        )
 
         return task.model_copy(
             update={

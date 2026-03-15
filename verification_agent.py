@@ -1,6 +1,7 @@
 """Verification agent: validates task state before marking complete."""
 
 from task import Task, TaskStatus
+from log_utils import log_step
 
 
 def _is_valid(task: Task) -> tuple[bool, str]:
@@ -20,9 +21,12 @@ class VerificationAgent:
 
     def verify(self, task: Task) -> Task:
         """If valid: status = complete. Else: mark_failed and return updated task."""
+        log_step("Verification Agent", "Validating execution results")
         valid, msg = _is_valid(task)
         if valid:
+            log_step("Verification Agent", "Validation passed", {"status": "complete"})
             return task.model_copy(update={"status": TaskStatus.complete}, deep=True)
+        log_step("Verification Agent", "Validation failed", {"reason": msg})
         return task.model_copy(
             update={"status": TaskStatus.failed, "error": msg},
             deep=True,

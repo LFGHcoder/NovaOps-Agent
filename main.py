@@ -1,5 +1,5 @@
 import json
-from workflow_manager import WorkflowManager
+from workflow_manager import WorkflowManager, result_to_json
 
 
 if __name__ == "__main__":
@@ -39,23 +39,7 @@ if __name__ == "__main__":
         }
     )
 
-    # ---- CLEAN DEMO OUTPUT ----
-    print("\n" + "=" * 50)
-    print("AI HR AUTOMATION RESULT")
-    print("=" * 50)
-
-    result = {
-        "candidate": task.candidate_data.get("name"),
-        "overall_score": task.evaluation.get("overall_score"),
-        "recommendation": task.evaluation.get("recommendation"),
-        "status": task.status.value
-    }
-
-    print(json.dumps(result, indent=4))
-
-    # Optional: show category breakdown
-    if "category_scores" in task.evaluation:
-        print("\nCategory Breakdown:")
-        print(json.dumps(task.evaluation["category_scores"], indent=4))
-
-    print("\n" + "=" * 50)  
+    # Consistent JSON result (includes error when failed, category_scores when present)
+    result = result_to_json(task)
+    print("\nFinal Result:")
+    print(json.dumps(result, indent=4))  
