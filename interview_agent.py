@@ -29,7 +29,7 @@ class InterviewAgent:
         Answers come from task.candidate_data["answers"] or are mocked.
         Returns updated task with candidate_answers set and status = interviewing.
         """
-        log_step("Screening Agent", "Analyzing candidate answers against job description")
+        log_step("Interview Agent", "Conducting technical screening (Q&A)")
         questions = task.interview_questions or []
         provided = task.candidate_data.get("answers") if isinstance(task.candidate_data.get("answers"), list) else None
 
@@ -40,7 +40,7 @@ class InterviewAgent:
             answers = []
             for i in range(len(questions)):
                 answers.append(_DEFAULT_MOCK_ANSWERS[i % len(_DEFAULT_MOCK_ANSWERS)])
-        log_step("Screening Agent", "Screening complete", {"answers_collected": len(answers), "questions_answered": len(questions)})
+        log_step("Interview Agent", "Screening complete", {"answers_collected": len(answers), "questions_answered": len(questions)})
 
         return task.model_copy(
             update={

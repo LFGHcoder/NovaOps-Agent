@@ -5,6 +5,7 @@ from typing import Any, Optional, Protocol
 
 from task import Task, TaskStatus, Rubric
 from planner_agent import PlannerAgent
+from screening_agent import ScreeningAgent
 from interview_agent import InterviewAgent
 from evaluation_agent import EvaluationAgent
 from mock_execution_agent import MockExecutionAgent
@@ -67,6 +68,7 @@ class WorkflowManager:
         execution_agent: Optional[ExecutionAgentProtocol] = None,
     ) -> None:
         self._planner = PlannerAgent()
+        self._screening_agent = ScreeningAgent()
         self._interview_agent = InterviewAgent()
         self._evaluation_agent = EvaluationAgent()
         self._execution_agent = execution_agent if execution_agent is not None else MockExecutionAgent()
@@ -148,6 +150,13 @@ class WorkflowManager:
             log_step("Workflow Manager", "Pipeline failed", {"error": task.error})
             return task
         logger.info("stage=plan task_id=%s status=%s", task.task_id, task.status.value)
+
+        try:
+            task = self._screening_agent.screen(task)
+        except Exception as e:  # noqa: BLE001
+            logger.exception("stage=screening task_id=%s error=%s", task.task_id, e)
+            log_step("Workflow Manager", "Pipeline failed", {"error": str(e)})
+            return self._mark_failed(task, "screening", str(e))
 
         try:
             task = self._interview_agent.conduct_interview(task)
