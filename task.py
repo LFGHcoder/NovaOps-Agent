@@ -16,7 +16,7 @@ class TaskStatus(str, Enum):
     evaluated = "evaluated"
     executing = "executing"
     verified = "verified"
-    complete = "complete"
+    complete = "completed"
     failed = "failed"
 
 

@@ -1,0 +1,27 @@
+CHRIS WILLIAMS
+chris.w@email.com | (555) 246-8135 | Denver, CO
+
+SUMMARY
+Recent graduate with internship experience. Primary focus on front-end development
+and scripting. Limited backend or system design experience; motivated to learn.
+
+SKILLS
+- JavaScript, React, HTML/CSS
+- Basic Python (intro courses and small scripts)
+- Git, basic command line
+- Some exposure to REST concepts (used APIs from front-end)
+
+EXPERIENCE
+
+Front-End Development Intern | WebAgency | 2023 – 2024 (6 months)
+- Built React components and integrated with existing REST APIs
+- Fixed UI bugs and improved accessibility
+- No backend or database work
+- Tech: JavaScript, React, REST API consumption
+
+Teaching Assistant – Intro to Programming | State College | 2022 – 2023
+- Helped students with Python basics (variables, loops, functions)
+- Graded assignments; no production or system design
+
+EDUCATION
+B.A. Computer Science (minor) | State College | 2024

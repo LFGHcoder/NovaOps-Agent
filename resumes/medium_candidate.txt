@@ -1,0 +1,29 @@
+BOB CHEN
+bob.chen@email.com | (555) 987-6543 | Austin, TX
+
+SUMMARY
+Software Engineer with 4 years of experience. Solid Python and web development
+background. Some exposure to APIs and databases; eager to grow in system design
+and backend scalability.
+
+SKILLS
+- Python, Flask, some FastAPI
+- REST APIs (consumption and basic design)
+- SQL (PostgreSQL, MySQL), basic query optimization
+- Docker, Linux, Git
+- JavaScript (Node.js) for side projects
+
+EXPERIENCE
+
+Software Engineer | MidSize Co. | 2021 – Present
+- Maintained and extended internal Python APIs; added new endpoints and validation
+- Wrote tests and fixed bugs in legacy Django codebase
+- Limited ownership of system design; worked from specs provided by senior engineers
+- Tech: Python, Django, PostgreSQL, Docker
+
+Junior Developer | LocalTech | 2019 – 2021
+- Built small CRUD APIs and scripts; learned code review and deployment
+- Tech: Python, Flask, SQLite
+
+EDUCATION
+B.S. Information Technology | State University | 2019

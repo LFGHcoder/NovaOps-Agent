@@ -1,0 +1,35 @@
+ALICE JOHNSON
+alice.johnson@email.com | (555) 123-4567 | San Francisco, CA
+
+SUMMARY
+Senior Backend Engineer with 6+ years building scalable Python services and REST APIs.
+Strong system design and distributed systems experience. Led technical design for
+high-traffic platforms serving 10M+ daily requests.
+
+SKILLS
+- Python, Django, FastAPI, asyncio
+- REST APIs, GraphQL, API design, versioning
+- System design: microservices, caching (Redis), message queues (Kafka, RabbitMQ)
+- SQL (PostgreSQL), NoSQL (MongoDB), database optimization
+- AWS (EC2, Lambda, S3), Docker, Kubernetes
+- Testing: pytest, unit/integration, load testing
+
+EXPERIENCE
+
+Senior Backend Engineer | TechCorp Inc. | 2020 – Present
+- Designed and implemented REST APIs for core platform; reduced p99 latency by 40%
+- Led system design for new order-processing pipeline (event-driven, idempotent)
+- Mentored 3 engineers; established API design and code review standards
+- Tech: Python, FastAPI, PostgreSQL, Redis, Kafka, AWS
+
+Backend Engineer | StartupXYZ | 2017 – 2020
+- Built billing and subscription APIs; handled idempotency and retries
+- Improved DB query performance; added indexing and connection pooling
+- Tech: Python, Django, PostgreSQL, Celery
+
+Software Engineer | DevShop | 2015 – 2017
+- Developed internal tools and APIs; collaborated with product and QA
+- Tech: Python, Flask, MySQL
+
+EDUCATION
+B.S. Computer Science | University of California | 2015

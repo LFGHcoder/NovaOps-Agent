@@ -1,5 +1,5 @@
 """Evaluation agent: scores candidate answers and produces recommendation."""
-
+import random
 import json
 import re
 from typing import Any, Callable
@@ -26,10 +26,12 @@ def _mock_nova_lite_evaluate(prompt: str) -> str:
 
 
 def _mock_nova_lite_category(prompt: str, scoring_scale: int) -> str:
-    """Mock Nova 2 Lite API call for one rubric category. Returns score and reasoning."""
+    """Mock Nova category scoring."""
+    score = random.randint(6, scoring_scale)
+
     return json.dumps({
-        "score": min(78 + hash(prompt) % 20, scoring_scale),
-        "reasoning": "Candidate addressed the criteria with relevant examples.",
+        "score": score,
+        "reasoning": "Candidate demonstrated relevant experience and problem solving ability."
     })
 
 
@@ -125,22 +127,24 @@ def _compute_weighted_score(
     scoring_scale: int,
 ) -> float:
     """
-    Category scores are on 0–scoring_scale; normalize to 0–100 contribution.
-    weighted_score = (category_score / 100) * category_weight  [with category_score normalized to 0–100]
-    overall_score = sum(weighted_scores)  → 0–100 when weights sum to 100.
+    Category score is 0–scoring_scale per category; weight is percentage (0–100).
+    total = sum(score * (weight/100)); overall_score = round(total * 10, 2) → scale 0–100.
     """
-    if scoring_scale <= 0:
-        return 0.0
-    # normalized contribution per category: (score/scale)*weight; weights sum to 100 → overall 0–100
-    return sum((c["score"] / scoring_scale) * c["weight"] for c in category_scores)
+    total = 0.0
+    for c in category_scores:
+        weight = c["weight"] / 100.0
+        total += c["score"] * weight
+    return round(total * 10, 2)
 
 
 def _score_to_recommendation(overall_score: float) -> str:
-    """Recommendation from overall_score (0–100)."""
-    if overall_score >= 75:
+    """Only evaluation_agent sets final recommendation. Score 0–100."""
+    if overall_score >= 80:
         return "Strong Hire"
-    if overall_score >= 60:
-        return "Consider"
+    if overall_score >= 65:
+        return "Shortlist"
+    if overall_score >= 50:
+        return "Review"
     return "Reject"
 
 
@@ -240,7 +244,7 @@ class EvaluationAgent:
 
         return {
             "category_scores": category_scores,
-            "overall_score": round(overall_score, 2),
+            "overall_score": overall_score,
             "recommendation": recommendation,
         }
 

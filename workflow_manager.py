@@ -33,16 +33,25 @@ RESULT_CATEGORY_SCORES = "category_scores"
 
 def result_to_json(task: Task) -> dict[str, Any]:
     """
-    Return a consistent JSON-serializable result from a task.
-    Always includes: candidate, overall_score, recommendation, status, error.
-    Includes category_scores when evaluation has rubric-based category scores.
+    Return consistent final output. Only evaluation_agent drives recommendation.
+    Status normalized to "completed" when complete. Safe defaults if pipeline failed.
     """
     evaluation = task.evaluation or {}
+    candidate_name = None
+    if isinstance(task.candidate_data, dict):
+        candidate_name = task.candidate_data.get("name")
+    status = task.status.value
+    if status == "complete":
+        status = "completed"
+    # Final recommendation comes only from evaluation_agent
+    recommendation = evaluation.get("recommendation")
+    if recommendation is None and task.error:
+        recommendation = "Reject"
     out: dict[str, Any] = {
-        RESULT_CANDIDATE: task.candidate_data.get("name") if isinstance(task.candidate_data, dict) else None,
+        RESULT_CANDIDATE: candidate_name,
         RESULT_OVERALL_SCORE: evaluation.get("overall_score"),
-        RESULT_RECOMMENDATION: evaluation.get("recommendation"),
-        RESULT_STATUS: task.status.value,
+        RESULT_RECOMMENDATION: recommendation,
+        RESULT_STATUS: status,
         RESULT_ERROR: task.error,
     }
     if "category_scores" in evaluation and evaluation["category_scores"]:
@@ -103,12 +112,16 @@ class WorkflowManager:
         job_description: str,
         candidate_data: dict[str, Any],
         rubric: Optional[dict[str, Any]] = None,
+        resume_file: Optional[str] = None,
     ) -> Task:
         """
         Run the full pipeline. On any failure the task is marked failed and returned.
         Errors are caught per step and as a top-level fallback; error message is always set when failed.
+        resume_file: optional label (e.g. "resumes/strong_candidate.txt") to print which candidate is being evaluated.
         """
         print(BANNER)
+        if resume_file:
+            print(f"\nEvaluating Candidate: {resume_file}\n")
         task: Task
         try:
             rubric_model = None

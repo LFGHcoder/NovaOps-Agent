@@ -95,8 +95,13 @@ def _rule_based_screening(resume: str, job_description: str) -> dict[str, Any]:
         recommendation = "reject"
     matched = [t for t in list(jd_terms)[:5] if t in resume_lower]
     missing = [t for t in list(jd_terms)[:5] if t not in resume_lower][:3]
+    candidate_name = "Candidate"
+    if resume and resume.strip():
+        lines = resume.strip().split("\n")
+        if lines and lines[0].strip():
+            candidate_name = lines[0].strip()
     return {
-        "candidate_name": "Candidate",
+        "candidate_name": candidate_name,
         "score": score,
         "strengths": [f"Matches: {', '.join(matched)}"] if matched else ["Resume provided"],
         "weaknesses": [f"Missing or weak: {', '.join(missing)}"] if missing else ["Limited keyword match"],
@@ -163,6 +168,12 @@ class ScreeningAgent:
 
         result, used_llm = _evaluate_with_llm(resume, job_description)
 
+        # Extract candidate name from first line of resume for consistency
+        if resume and resume.strip():
+            lines = resume.strip().split("\n")
+            if lines and lines[0].strip():
+                result["candidate_name"] = lines[0].strip()
+
         log_step(
             "Screening Agent",
             "Resume evaluation complete",
@@ -175,10 +186,10 @@ class ScreeningAgent:
 
         evaluation = dict(task.evaluation or {})
         evaluation["screening"] = result
-        if result.get("candidate_name") and isinstance(task.candidate_data, dict):
+        candidate_name = result.get("candidate_name") or "Candidate"
+        if isinstance(task.candidate_data, dict):
             candidate_data = dict(task.candidate_data)
-            if not candidate_data.get("name"):
-                candidate_data["name"] = result["candidate_name"]
+            candidate_data["name"] = candidate_name
             return task.model_copy(
                 update={"evaluation": evaluation, "candidate_data": candidate_data},
                 deep=True,

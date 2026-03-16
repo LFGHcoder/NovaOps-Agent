@@ -24,7 +24,7 @@ class VerificationAgent:
         log_step("Verification Agent", "Validating execution results")
         valid, msg = _is_valid(task)
         if valid:
-            log_step("Verification Agent", "Validation passed", {"status": "complete"})
+            log_step("Verification Agent", "Validation passed", {"status": "completed"})
             return task.model_copy(update={"status": TaskStatus.complete}, deep=True)
         log_step("Verification Agent", "Validation failed", {"reason": msg})
         return task.model_copy(
