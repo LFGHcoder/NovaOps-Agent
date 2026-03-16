@@ -7,35 +7,37 @@ from typing import Any
 from task import Task
 from log_utils import log_step
 
+try:
+    # Preferred import style
+    from nova_client import call_nova
+except ImportError:  # Fallback if direct import fails
+    import nova_client  # type: ignore[import]
 
-SCREENING_PROMPT = """You are an expert AI recruiter.
+    def call_nova(prompt: str) -> str:
+        return nova_client.call_nova(prompt)
+
+
+SCREENING_PROMPT_TEMPLATE = """You are an AI recruiter.
+
 Evaluate the candidate resume against the job description.
 
-Return only valid JSON with:
-- candidate_name (string)
-- score (number 0-100)
-- strengths (array of strings)
-- weaknesses (array of strings)
-- recommendation (one of: shortlist, review, reject)
+IMPORTANT:
+Return ONLY valid JSON in the exact format below.
+Do not include explanations, markdown, or extra text.
 
-Job description:
-{job_description}
+{{
+  "score": number between 0 and 100,
+  "strengths": ["..."],
+  "weaknesses": ["..."],
+  "recommendation": "shortlist" | "review" | "reject"
+}}
 
 Resume:
 {resume}
 
-Return only the JSON object, no other text."""
-
-
-def _mock_llm_screening(prompt: str) -> str:
-    """Mock LLM call for resume screening. Replace with real Nova/API when available."""
-    return json.dumps({
-        "candidate_name": "Candidate",
-        "score": 78,
-        "strengths": ["Relevant experience", "Clear formatting", "Matching skills"],
-        "weaknesses": ["Limited leadership examples"],
-        "recommendation": "review",
-    })
+Job Description:
+{job_description}
+"""
 
 
 def _parse_json_safe(raw: str) -> dict[str, Any] | None:
@@ -53,8 +55,6 @@ def _parse_json_safe(raw: str) -> dict[str, Any] | None:
 
 def _validate_screening_payload(data: dict[str, Any]) -> bool:
     """Return True if payload has required keys and valid types."""
-    if not isinstance(data.get("candidate_name"), str):
-        return False
     if "score" not in data or not isinstance(data["score"], (int, float)):
         return False
     s = float(data["score"])
@@ -121,17 +121,31 @@ def evaluate_with_llm(resume: str, job_description: str) -> dict[str, Any]:
 
 def _evaluate_with_llm(resume: str, job_description: str) -> tuple[dict[str, Any], bool]:
     """Internal: returns (result, used_llm)."""
+    # Escape braces in user content so .format() doesn't treat them as placeholders
+    resume_safe = (resume or "").replace("{", "{{").replace("}", "}}")
+    job_description_safe = (job_description or "").replace("{", "{{").replace("}", "}}")
+
+    prompt = SCREENING_PROMPT_TEMPLATE.format(
+        job_description=job_description_safe,
+        resume=resume_safe,
+    )
+
     try:
-        prompt = SCREENING_PROMPT.format(
-            job_description=job_description or "",
-            resume=resume or "",
-        )
-        response = _mock_llm_screening(prompt)
+        print("Calling Nova...")
+
+        response = call_nova(prompt)
+
+        print("Nova raw response:", response)
+
         data = _parse_json_safe(response)
-        if data is not None and _validate_screening_payload(data):
+
+        if data is None:
+            print("Nova response was not valid JSON")
+        elif not _validate_screening_payload(data):
+            print("Nova JSON failed validation:", data)
+        else:
             return (
                 {
-                    "candidate_name": str(data["candidate_name"]),
                     "score": round(float(data["score"]), 2),
                     "strengths": list(data["strengths"]) if isinstance(data["strengths"], list) else [],
                     "weaknesses": list(data["weaknesses"]) if isinstance(data["weaknesses"], list) else [],
@@ -139,8 +153,12 @@ def _evaluate_with_llm(resume: str, job_description: str) -> tuple[dict[str, Any
                 },
                 True,
             )
-    except Exception:  # noqa: BLE001
-        pass
+
+    except Exception as e:
+        print("Nova error:", e)
+
+    # fallback
+    print("Using rule-based fallback scoring")
     return (_rule_based_screening(resume, job_description), False)
 
 
@@ -180,7 +198,7 @@ class ScreeningAgent:
             {
                 "score": result["score"],
                 "recommendation": result["recommendation"],
-                "source": "llm" if used_llm else "rule_based",
+                "source": "nova" if used_llm else "rule_based",
             },
         )
 
