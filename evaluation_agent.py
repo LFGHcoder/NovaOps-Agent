@@ -6,6 +6,7 @@ from typing import Any, Callable
 
 from task import Rubric, RubricCategory, Task, TaskStatus
 from log_utils import log_step
+from nova_client import call_nova
 
 
 def _mock_nova_lite_evaluate(prompt: str) -> str:
@@ -92,8 +93,8 @@ def _validate_evaluation_payload(data: dict[str, Any]) -> None:
     if "recommendation" not in data:
         raise ValueError("recommendation is required")
     rec = data["recommendation"]
-    if rec not in ("shortlist", "reject"):
-        raise ValueError('recommendation must be "shortlist" or "reject"')
+    if rec not in ("shortlist", "review", "reject"):
+        raise ValueError('recommendation must be "shortlist", "review", or "reject"')
 
 
 def _validate_category_score_payload(
@@ -118,8 +119,8 @@ def _validate_recommendation_payload(data: dict[str, Any]) -> None:
     """Ensure recommendation payload is valid. Raises ValueError if invalid."""
     if "recommendation" not in data:
         raise ValueError("recommendation is required")
-    if data["recommendation"] not in ("shortlist", "reject"):
-        raise ValueError('recommendation must be "shortlist" or "reject"')
+    if data["recommendation"] not in ("shortlist", "review", "reject"):
+        raise ValueError('recommendation must be "shortlist", "review", or "reject"')
 
 
 def _compute_weighted_score(
@@ -146,6 +147,58 @@ def _score_to_recommendation(overall_score: float) -> str:
     if overall_score >= 50:
         return "Review"
     return "Reject"
+
+
+def _evaluate_with_nova(task: Task) -> dict[str, Any]:
+    """
+    Use Amazon Nova to evaluate candidate answers.
+
+    Expected JSON:
+    {
+      "overall_score": 0-100,
+      "strengths": [...],
+      "weaknesses": [...],
+      "recommendation": "shortlist" | "review" | "reject"
+    }
+    """
+    required_skills = task.evaluation.get("required_skills") or []
+    criteria = task.evaluation.get("evaluation_criteria") or {}
+    questions = task.interview_questions or []
+    answers = task.candidate_answers or []
+
+    qa_block = "\n".join(f"Q: {q}\nA: {a}" for q, a in zip(questions, answers))
+
+    prompt = (
+        "You are an expert AI technical interviewer.\n\n"
+        "Evaluate the candidate's interview answers against the required skills and evaluation criteria.\n\n"
+        "Return ONLY valid JSON with the following fields:\n"
+        '- \"overall_score\": number between 0 and 100\n'
+        '- \"strengths\": array of strings\n'
+        '- \"weaknesses\": array of strings\n'
+        '- \"recommendation\": one of \"shortlist\", \"review\", \"reject\"\n\n'
+        "Required skills:\n"
+        f"{json.dumps(required_skills, indent=2)}\n\n"
+        "Evaluation criteria:\n"
+        f"{json.dumps(criteria, indent=2)}\n\n"
+        "Questions and answers:\n"
+        f"{qa_block}\n"
+    )
+
+    print("Evaluation Agent calling Nova...")
+    response = call_nova(prompt)
+    print("Evaluation Nova response:", response)
+
+    data = _parse_json_strict(response)
+    _validate_evaluation_payload(data)
+
+    score = float(data["overall_score"])
+    return {
+        "overall_score": round(score, 2),
+        "strengths": list(data["strengths"]),
+        "weaknesses": list(data["weaknesses"]),
+        # Normalize final recommendation based on score bands
+        "recommendation": _score_to_recommendation(score),
+    }
 
 
 class EvaluationAgent:
@@ -249,16 +302,13 @@ class EvaluationAgent:
         }
 
     def _evaluate_fallback(self, task: Task) -> dict[str, Any]:
-        """Existing AI-based evaluation when no rubric."""
-        prompt = self._build_prompt(task)
-        response = self._call_nova_lite(prompt)
-        data = _parse_response(response, _validate_evaluation_payload)
-        overall = data["overall_score"]
+        """Simple fallback when Nova is unavailable and no rubric is present."""
+        # Conservative baseline: no strengths/weaknesses, reject
         return {
-            "overall_score": overall,
-            "strengths": list(data["strengths"]),
-            "weaknesses": list(data["weaknesses"]),
-            "recommendation": _score_to_recommendation(overall),
+            "overall_score": 0.0,
+            "strengths": [],
+            "weaknesses": [],
+            "recommendation": "Reject",
         }
 
     def evaluate(self, task: Task) -> Task:
@@ -268,10 +318,16 @@ class EvaluationAgent:
         Merges result into task.evaluation and sets status = evaluated.
         """
         log_step("Evaluation Agent", "Calculating weighted candidate score")
-        if task.rubric and task.rubric.categories:
-            evaluation_result = self._evaluate_with_rubric(task)
-        else:
-            evaluation_result = self._evaluate_fallback(task)
+        try:
+            # Primary path: use Nova for holistic evaluation
+            evaluation_result = _evaluate_with_nova(task)
+        except Exception as e:  # noqa: BLE001
+            print("Evaluation Nova error:", e)
+            # Fallback: use existing rubric-based scoring when available
+            if task.rubric and task.rubric.categories:
+                evaluation_result = self._evaluate_with_rubric(task)
+            else:
+                evaluation_result = self._evaluate_fallback(task)
         log_step(
             "Evaluation Agent",
             "Score computed",
